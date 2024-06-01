@@ -69,7 +69,7 @@
                         </div>
                     </form>
                 </div>
-                <button class="btn btn-success btn-block" onclick="downloadAnnotations()">Download Annotations</button>
+                <button class="btn btn-success btn-block" onclick="saveAnnotation()">Save Annotation</button>
             </div>
         </div>
     </div>
@@ -117,20 +117,43 @@
             
             if (imageName) {
                 annotations[imageName] = {
+                    name: imageName,
                     classification: classification,
                     description: description
                 };
             }
         }
 
-        function downloadAnnotations() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotations, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "annotations.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+        function saveAnnotation() {
+            const imageName = document.getElementById('image-name').value;
+            if (!imageName || !annotations[imageName]) {
+                alert('No annotation to save.');
+                return;
+            }
+
+            const annotation = annotations[imageName];
+            const apiUrl = 'https://ap-south-1.aws.data.mongodb-api.com/app/data-awlzoeo/endpoint/data/v1/action/insertOne';
+            const apiKey = 'BqrcsZapyEm4eBWoY0kLB3K2zhTKjuhwyVyjZrR4Jq0XLGI1DVcrnbltpSQPuyfe';
+            const databaseName = 'metabolomics-feature-classification-annotator';
+            const collectionName = 'feature-classification';
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': apiKey,
+                    'Access-Control-Request-Headers': '*'
+                },
+                body: JSON.stringify({
+                    dataSource: 'metabolomics-feature-classification-annotator',
+                    database: databaseName,
+                    collection: collectionName,
+                    document: annotation
+                })
+            })
+            .then(response => response.json())
+            .then(data => alert('Annotation saved successfully'))
+            .catch(error => console.error('Error saving annotation:', error));
         }
 
         // Load images on page load
