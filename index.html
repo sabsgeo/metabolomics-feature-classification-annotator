@@ -98,20 +98,19 @@
 
         // Automatically load images from the training_images folder
         function loadImagesFromFolder() {
-            const imageFolder = 'training_images';
+            const imageFolder = 'https://api.github.com/repos/sabsgeo/metabolomics-feature-classification-annotator/contents/training_images';
             fetch(imageFolder)
-                .then(response => response.text())
+                .then(response => response.json())
                 .then(data => {
-                    const parser = new DOMParser();
-                    const htmlDoc = parser.parseFromString(data, 'text/html');
-                    const imageElements = htmlDoc.querySelectorAll('a[href$=".jpg"], a[href$=".png"], a[href$=".jpeg"]');
-                    images = Array.from(imageElements).map(element => ({
-                        src: `${imageFolder}/${element.getAttribute('href')}`,
-                        name: element.getAttribute('href')
+                    images = data.map(file => ({
+                        src: file.download_url,
+                        name: file.name
                     }));
                     updateImageList();
-                });
-        }
+                })
+            .catch(error => console.error('Error loading images:', error));
+}
+
 
         function updateImageList() {
             const imageListElement = document.getElementById('image-list');
