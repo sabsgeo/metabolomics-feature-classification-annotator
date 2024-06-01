@@ -31,6 +31,25 @@
         li:hover {
             background-color: #e2e6ea;
         }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 200px;
+        }
+        .toast-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .toast-error {
+            background-color: #dc3545;
+            color: white;
+        }
+        @media (max-width: 767px) {
+            .container {
+                margin-top: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -49,8 +68,8 @@
                 <div class="image-container mb-4">
                     <img id="current-image" src="" class="img-fluid" alt="Select an image">
                 </div>
-                <div class="annotation-form">
-                    <form id="annotation-form">
+                <div class="annotation-form" id="annotation-form">
+                    <form>
                         <div class="form-group">
                             <label for="image-name">Image Name:</label>
                             <input type="text" class="form-control" id="image-name" name="image-name" readonly>
@@ -69,17 +88,58 @@
                         </div>
                     </form>
                 </div>
-                <button class="btn btn-success btn-block" onclick="saveAnnotation()">Save Annotation</button>
+                <button class="btn btn-success btn-block" id="save-button" onclick="saveAnnotation()" disabled>Save Annotation</button>
             </div>
         </div>
     </div>
+
+    <!-- Success Toast -->
+    <div class="toast toast-success" id="successToast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="mr-auto">Success</strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="toast-body">
+            Annotation saved successfully.
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div class="toast toast-error" id="errorToast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="mr-auto">Error</strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="toast-body">
+            Error saving annotation.
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
     <script>
         let images = [];
         let annotations = {};
 
+        const githubToken = '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';
+        const owner = 'sabsgeo';
+        const repo = 'metabolomics-feature-classification-annotator';
+        const branch = 'main';
+
         function loadImagesFromFolder() {
-            const imageFolder = 'https://api.github.com/repos/sabsgeo/metabolomics-feature-classification-annotator/contents/training_images';
-            fetch(imageFolder)
+            const imageFolder = `https://api.github.com/repos/${owner}/${repo}/contents/training_images`;
+            fetch(imageFolder, {
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
                     images = data.map(file => ({
@@ -108,6 +168,9 @@
             document.getElementById('image-name').value = image.name;
             document.getElementById('classification').value = annotations[image.name]?.classification || '';
             document.getElementById('description').value = annotations[image.name]?.description || '';
+
+            document.getElementById('annotation-form').scrollIntoView({ behavior: 'smooth' });
+            checkFormCompletion();
         }
 
         function updateAnnotation() {
@@ -122,41 +185,107 @@
                     description: description
                 };
             }
+            checkFormCompletion();
         }
 
-        function saveAnnotation() {
+        function checkFormCompletion() {
+            const imageName = document.getElementById('image-name').value;
+            const classification = document.getElementById('classification').value;
+            const description = document.getElementById('description').value;
+
+            const saveButton = document.getElementById('save-button');
+            if (imageName && classification && description) {
+                saveButton.disabled = false;
+            } else {
+                saveButton.disabled = true;
+            }
+        }
+
+        async function saveAnnotation() {
             const imageName = document.getElementById('image-name').value;
             if (!imageName || !annotations[imageName]) {
-                alert('No annotation to save.');
+                showToast('errorToast', 'No annotation to save.');
                 return;
             }
 
             const annotation = annotations[imageName];
-            const apiUrl = 'https://ap-south-1.aws.data.mongodb-api.com/app/data-awlzoeo/endpoint/data/v1/action/insertOne';
-            const apiKey = 'BqrcsZapyEm4eBWoY0kLB3K2zhTKjuhwyVyjZrR4Jq0XLGI1DVcrnbltpSQPuyfe';
-            const databaseName = 'metabolomics-feature-classification-annotator';
-            const collectionName = 'feature-classification';
+            const r = (Math.random() + 1).toString(36).substring(7);
+            const path = `user_input/${imageName.split(".")[0]}_${r}.json`;
 
-            fetch(apiUrl, {
-                method: 'POST',
+            const jsonObject = {
+                name: annotation.name,
+                description: annotation.description,
+                classification: annotation.classification
+            };
+
+            const jsonString = JSON.stringify(jsonObject);
+            const base64Content = btoa(jsonString);
+
+            const apiEndpoint = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+            const payload = {
+                message: 'Adding a JSON file via GitHub API',
+                content: base64Content
+            };
+
+            fetch(apiEndpoint, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': apiKey,
-                    'Access-Control-Request-Headers': '*'
-                },
-                body: JSON.stringify({
-                    dataSource: 'metabolomics-feature-classification-annotator',
-                    database: databaseName,
-                    collection: collectionName,
-                    document: annotation
-                })
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            })
+            .then(response => {
+                if (response.status === 200) {
+                    return response.json();
+                } else if (response.status === 404) {
+                    return null; // File does not exist
+                } else {
+                    throw new Error('Failed to check file existence');
+                }
+            })
+            .then(data => {
+                if (data && data.sha) {
+                    payload.sha = data.sha;
+                }
+                return fetch(apiEndpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify(payload)
+                });
             })
             .then(response => response.json())
-            .then(data => alert('Annotation saved successfully'))
-            .catch(error => console.error('Error saving annotation:', error));
+            .then(data => {
+                showToast('successToast', 'Annotation saved successfully.');
+                clearAnnotationForm(imageName);
+            })
+            .catch(error => {
+                console.error('Error saving annotation:', error);
+                showToast('errorToast', 'Error saving annotation.');
+                clearAnnotationForm(imageName);
+            });
         }
 
-        // Load images on page load
+        function clearAnnotationForm(imageName) {
+            document.getElementById('classification').value = '';
+            document.getElementById('description').value = '';
+            if (annotations[imageName]) {
+                annotations[imageName]['classification'] = '';
+                annotations[imageName]['description'] = '';
+            }
+            checkFormCompletion();
+        }
+
+        function showToast(toastId, message) {
+            const toastElement = document.getElementById(toastId);
+            toastElement.querySelector('.toast-body').textContent = message;
+            $(toastElement).toast({ delay: 3000 });
+            $(toastElement).toast('show');
+        }
+
         document.addEventListener('DOMContentLoaded', loadImagesFromFolder);
     </script>
 </body>
