@@ -10,30 +10,9 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        .container {
-            display: flex;
-            max-width: 1000px;
-            margin: auto;
-        }
-        .sidebar {
-            flex: 1;
-            margin-right: 20px;
-        }
-        .main-content {
-            flex: 2;
-        }
         .image-container img {
             max-width: 100%;
             height: auto;
-        }
-        .image-container {
-            margin-bottom: 20px;
-        }
-        .annotation-form input, .annotation-form textarea, .annotation-form select {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            box-sizing: border-box;
         }
         .annotation-form label {
             font-weight: bold;
@@ -56,47 +35,48 @@
 </head>
 <body>
     <div class="container">
-        <div class="sidebar">
-            <div class="image-list">
-                <h2>Images</h2>
-                <ul id="image-list" class="list-group">
-                    <!-- Image list items will be added here -->
-                </ul>
+        <div class="row">
+            <div class="col-12 col-md-4 mb-4">
+                <div class="image-list">
+                    <h2>Images</h2>
+                    <ul id="image-list" class="list-group">
+                        <!-- Image list items will be added here -->
+                    </ul>
+                </div>
             </div>
-        </div>
-        <div class="main-content">
-            <h1>Image Annotation Tool</h1>
-            <div class="image-container">
-                <img id="current-image" src="" class="img-fluid" alt="Select an image">
+            <div class="col-12 col-md-8">
+                <h1>Image Annotation Tool</h1>
+                <div class="image-container mb-4">
+                    <img id="current-image" src="" class="img-fluid" alt="Select an image">
+                </div>
+                <div class="annotation-form">
+                    <form id="annotation-form">
+                        <div class="form-group">
+                            <label for="image-name">Image Name:</label>
+                            <input type="text" class="form-control" id="image-name" name="image-name" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="classification">Classification:</label>
+                            <select class="form-control" id="classification" name="classification" onchange="updateAnnotation()">
+                                <option value="">Select Classification</option>
+                                <option value="Good">Good</option>
+                                <option value="Bad">Bad</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="description">Description:</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <button class="btn btn-success btn-block" onclick="downloadAnnotations()">Download Annotations</button>
             </div>
-            <div class="annotation-form">
-                <form id="annotation-form">
-                    <div class="form-group">
-                        <label for="image-name">Image Name:</label>
-                        <input type="text" class="form-control" id="image-name" name="image-name" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="classification">Classification:</label>
-                        <select class="form-control" id="classification" name="classification" onchange="updateAnnotation()">
-                            <option value="">Select Classification</option>
-                            <option value="Good">Good</option>
-                            <option value="Bad">Bad</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="description">Description:</label>
-                        <textarea class="form-control" id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
-                    </div>
-                </form>
-            </div>
-            <button class="btn btn-success btn-block" onclick="downloadAnnotations()">Download Annotations</button>
         </div>
     </div>
     <script>
         let images = [];
         let annotations = {};
 
-        // Automatically load images from the training_images folder
         function loadImagesFromFolder() {
             const imageFolder = 'https://api.github.com/repos/sabsgeo/metabolomics-feature-classification-annotator/contents/training_images';
             fetch(imageFolder)
@@ -108,9 +88,8 @@
                     }));
                     updateImageList();
                 })
-            .catch(error => console.error('Error loading images:', error));
-}
-
+                .catch(error => console.error('Error loading images:', error));
+        }
 
         function updateImageList() {
             const imageListElement = document.getElementById('image-list');
