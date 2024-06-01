@@ -122,15 +122,11 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cvws.icloud-content.com/B/AaDjIisYl25RkoLxhKjbkDVKluvcAWD1ltFD4bmTGEpQA-BA3NcaROLB/constants.js?o=AlAdXhzmDPV4F78J3w5HQ_HbPm9Gekfgd-NzWKJIoZwN&v=1&x=3&a=CAogTl-izMbFrpCVaX06MQxx_iGTKy1l8Fvw5lFl5hTO1WYSbxDH9sOS_TEYx9OflP0xIgEAUgRKluvcWgQaROLBaifpRv2xrkBM14qwknQtTimvQl64zNc92InR7ASGDqhNCJ7vCUFVSQZyJxYB2NYkkbUHJERQ5dH9uFT17E4fvYP_pkyQy6T8DRAlNQNCpXZfBA&e=1717224073&fl=&r=2acbde26-e779-4797-bd34-9b8077d40766-1&k=5wvMFkeOb9n4CLhVKD40zQ&ckc=com.apple.clouddocs&ckz=com.apple.CloudDocs&p=45&s=4VvkCvnOlM-zHHqz_v8WIme7mBQ"></script>
 
     <script>
         let images = [];
         let annotations = {};
-
-        const githubToken = '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';
-        const owner = 'sabsgeo';
-        const repo = 'metabolomics-feature-classification-annotator';
-        const branch = 'main';
 
         function loadImagesFromFolder() {
             const imageFolder = `https://api.github.com/repos/${owner}/${repo}/contents/training_images`;
