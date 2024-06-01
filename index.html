@@ -38,9 +38,6 @@
         .annotation-form label {
             font-weight: bold;
         }
-        #file-input {
-            display: none;
-        }
         ul {
             list-style-type: none;
             padding: 0;
@@ -60,8 +57,6 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <input type="file" id="file-input" multiple accept="image/*" onchange="loadImages(event)">
-            <button class="btn btn-primary btn-block" onclick="document.getElementById('file-input').click()">Load Images</button>
             <div class="image-list">
                 <h2>Images</h2>
                 <ul id="image-list" class="list-group">
@@ -101,14 +96,21 @@
         let images = [];
         let annotations = {};
 
-        function loadImages(event) {
-            const files = event.target.files;
-            const newImages = Array.from(files).map(file => ({
-                src: URL.createObjectURL(file),
-                name: file.name
-            }));
-            images = images.concat(newImages);
-            updateImageList();
+        // Automatically load images from the training_images folder
+        function loadImagesFromFolder() {
+            const imageFolder = 'training_images';
+            fetch(imageFolder)
+                .then(response => response.text())
+                .then(data => {
+                    const parser = new DOMParser();
+                    const htmlDoc = parser.parseFromString(data, 'text/html');
+                    const imageElements = htmlDoc.querySelectorAll('a[href$=".jpg"], a[href$=".png"], a[href$=".jpeg"]');
+                    images = Array.from(imageElements).map(element => ({
+                        src: `${imageFolder}/${element.getAttribute('href')}`,
+                        name: element.getAttribute('href')
+                    }));
+                    updateImageList();
+                });
         }
 
         function updateImageList() {
@@ -152,6 +154,9 @@
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
         }
+
+        // Load images on page load
+        document.addEventListener('DOMContentLoaded', loadImagesFromFolder);
     </script>
 </body>
 </html>
