@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Annotation Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            max-width: 1000px;
+            margin: auto;
+        }
+        .sidebar {
+            flex: 1;
+            margin-right: 20px;
+        }
+        .main-content {
+            flex: 2;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .image-container {
+            margin-bottom: 20px;
+        }
+        .annotation-form {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .annotation-form input, .annotation-form textarea, .annotation-form select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        .annotation-form label {
+            font-weight: bold;
+        }
+        #file-input {
+            display: none;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        li:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <input type="file" id="file-input" multiple accept="image/*" onchange="loadImages(event)">
+            <button onclick="document.getElementById('file-input').click()">Load Images</button>
+            <div class="image-list">
+                <h2>Images</h2>
+                <ul id="image-list">
+                    <!-- Image list items will be added here -->
+                </ul>
+            </div>
+        </div>
+        <div class="main-content">
+            <h1>Image Annotation Tool</h1>
+            <div class="image-container">
+                <img id="current-image" src="" alt="Select an image">
+            </div>
+            <div class="annotation-form">
+                <form id="annotation-form">
+                    <label for="image-name">Image Name:</label>
+                    <input type="text" id="image-name" name="image-name" readonly>
+                    <label for="classification">Classification:</label>
+                    <select id="classification" name="classification" onchange="updateAnnotation()">
+                        <option value="Good">Good</option>
+                        <option value="Bad">Bad</option>
+                    </select>
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
+                </form>
+            </div>
+            <button onclick="downloadAnnotations()">Download Annotations</button>
+        </div>
+    </div>
+    <script>
+        let images = [];
+        let annotations = {};
+
+        function loadImages(event) {
+            const files = event.target.files;
+            const newImages = Array.from(files).map(file => ({
+                src: URL.createObjectURL(file),
+                name: file.name
+            }));
+            images = images.concat(newImages);
+            updateImageList();
+        }
+
+        function updateImageList() {
+            const imageListElement = document.getElementById('image-list');
+            imageListElement.innerHTML = '';
+            images.forEach(image => {
+                const listItem = document.createElement('li');
+                listItem.textContent = image.name;
+                listItem.onclick = () => loadImage(image);
+                imageListElement.appendChild(listItem);
+            });
+        }
+
+        function loadImage(image) {
+            document.getElementById('current-image').src = image.src;
+            document.getElementById('image-name').value = image.name;
+            document.getElementById('classification').value = annotations[image.name]?.classification || '';
+            document.getElementById('description').value = annotations[image.name]?.description || '';
+        }
+
+        function updateAnnotation() {
+            const imageName = document.getElementById('image-name').value;
+            const classification = document.getElementById('classification').value;
+            const description = document.getElementById('description').value;
+            
+            if (imageName) {
+                annotations[imageName] = {
+                    classification: classification,
+                    description: description
+                };
+            }
+        }
+
+        function downloadAnnotations() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(annotations, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "annotations.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+</body>
+</html>
