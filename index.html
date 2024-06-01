@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Annotation Tool</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,10 +29,6 @@
         .image-container {
             margin-bottom: 20px;
         }
-        .annotation-form {
-            margin-top: 20px;
-            text-align: left;
-        }
         .annotation-form input, .annotation-form textarea, .annotation-form select {
             width: 100%;
             padding: 10px;
@@ -52,11 +49,11 @@
             margin: 10px 0;
             cursor: pointer;
             padding: 10px;
-            background-color: #f0f0f0;
+            background-color: #f8f9fa;
             border-radius: 5px;
         }
         li:hover {
-            background-color: #e0e0e0;
+            background-color: #e2e6ea;
         }
     </style>
 </head>
@@ -64,10 +61,10 @@
     <div class="container">
         <div class="sidebar">
             <input type="file" id="file-input" multiple accept="image/*" onchange="loadImages(event)">
-            <button onclick="document.getElementById('file-input').click()">Load Images</button>
+            <button class="btn btn-primary btn-block" onclick="document.getElementById('file-input').click()">Load Images</button>
             <div class="image-list">
                 <h2>Images</h2>
-                <ul id="image-list">
+                <ul id="image-list" class="list-group">
                     <!-- Image list items will be added here -->
                 </ul>
             </div>
@@ -75,22 +72,29 @@
         <div class="main-content">
             <h1>Image Annotation Tool</h1>
             <div class="image-container">
-                <img id="current-image" src="" alt="Select an image">
+                <img id="current-image" src="" class="img-fluid" alt="Select an image">
             </div>
             <div class="annotation-form">
                 <form id="annotation-form">
-                    <label for="image-name">Image Name:</label>
-                    <input type="text" id="image-name" name="image-name" readonly>
-                    <label for="classification">Classification:</label>
-                    <select id="classification" name="classification" onchange="updateAnnotation()">
-                        <option value="Good">Good</option>
-                        <option value="Bad">Bad</option>
-                    </select>
-                    <label for="description">Description:</label>
-                    <textarea id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
+                    <div class="form-group">
+                        <label for="image-name">Image Name:</label>
+                        <input type="text" class="form-control" id="image-name" name="image-name" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="classification">Classification:</label>
+                        <select class="form-control" id="classification" name="classification" onchange="updateAnnotation()">
+                            <option value="">Select Classification</option>
+                            <option value="Good">Good</option>
+                            <option value="Bad">Bad</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
+                    </div>
                 </form>
             </div>
-            <button onclick="downloadAnnotations()">Download Annotations</button>
+            <button class="btn btn-success btn-block" onclick="downloadAnnotations()">Download Annotations</button>
         </div>
     </div>
     <script>
@@ -113,6 +117,7 @@
             images.forEach(image => {
                 const listItem = document.createElement('li');
                 listItem.textContent = image.name;
+                listItem.className = 'list-group-item list-group-item-action';
                 listItem.onclick = () => loadImage(image);
                 imageListElement.appendChild(listItem);
             });
