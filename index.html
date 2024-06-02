@@ -56,6 +56,23 @@
             background-color: #dc3545;
             color: white;
         }
+        .record-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .record-controls button {
+            margin-right: 5px;
+        }
+        .recordings-list {
+            margin-top: 10px;
+        }
+        .recording-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
         @media (max-width: 767px) {
             .container {
                 margin-top: 20px;
@@ -67,7 +84,7 @@
     <div class="container">
         <div class="row">
             <div class="col-12 col-md-4 mb-4">
-                <div class="image-list" id="image-list-div">
+                <div class="image-list">
                     <h2>Images</h2>
                     <ul id="image-list" class="list-group">
                         <!-- Image list items will be added here -->
@@ -96,6 +113,11 @@
                         <div class="form-group">
                             <label for="description">Description:</label>
                             <textarea class="form-control" id="description" name="description" rows="4" oninput="updateAnnotation()"></textarea>
+                            <div class="record-controls">
+                                <button type="button" class="btn btn-secondary" id="start-recording" onclick="startRecording()" disabled>Start Recording</button>
+                                <button type="button" class="btn btn-danger" id="stop-recording" onclick="stopRecording()" disabled>Stop Recording</button>
+                            </div>
+                            <div class="recordings-list" id="recordings-list"></div>
                         </div>
                     </form>
                 </div>
@@ -138,6 +160,9 @@
     <script>
         let images = [];
         let annotations = {};
+        let mediaRecorder;
+        let audioChunks = [];
+        let currentAudioBlob = null;
 
         function loadImagesFromFolder() {
             const imageFolder = `https://api.github.com/repos/${owner}/${repo}/contents/training_images`;
@@ -197,7 +222,8 @@
                 annotations[imageName] = {
                     name: imageName,
                     classification: classification,
-                    description: description
+                    description: description,
+                    audio: currentAudioBlob ? URL.createObjectURL(currentAudioBlob) : null
                 };
             }
             checkFormCompletion();
@@ -207,11 +233,18 @@
             const imageName = document.getElementById('image-name').value;
             const classification = document.getElementById('classification').value;
             const description = document.getElementById('description').value;
-
             const saveButton = document.getElementById('save-button');
-            if (imageName && classification && description) {
-                saveButton.disabled = false;
+            const startRecordingButton = document.getElementById('start-recording');
+
+            if (imageName && classification) {
+                startRecordingButton.disabled = false;
+                if (description || currentAudioBlob) {
+                    saveButton.disabled = false;
+                } else {
+                    saveButton.disabled = true;
+                }
             } else {
+                startRecordingButton.disabled = true;
                 saveButton.disabled = true;
             }
         }
@@ -224,16 +257,51 @@
             }
 
             const annotation = annotations[imageName];
+            if (currentAudioBlob) {
+                // Upload the audio blob
+                const r = (Math.random() + 1).toString(36).substring(7);
+                const audioPath = `audio/${imageName.split(".")[0]}_${r}.wav`;
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    const base64Audio = reader.result.split(',')[1];
+                    const audioPayload = {
+                        message: 'Adding audio file via GitHub API',
+                        content: base64Audio
+                    };
+
+                    const audioEndpoint = `https://api.github.com/repos/${owner}/${repo}/contents/${audioPath}`;
+
+                    fetch(audioEndpoint, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${githubToken}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify(audioPayload)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        annotation.description = `https://raw.githubusercontent.com/${owner}/${repo}/main/${audioPath}`;
+                        uploadAnnotation(annotation, imageName);
+                    })
+                    .catch(error => {
+                        console.error('Error saving recording:', error);
+                        showToast('errorToast', 'Error saving recording.');
+                    });
+                };
+
+                reader.readAsDataURL(currentAudioBlob);
+            } else {
+                uploadAnnotation(annotation, imageName);
+            }
+        }
+
+        function uploadAnnotation(annotation, imageName) {
             const r = (Math.random() + 1).toString(36).substring(7);
             const path = `user_input/${imageName.split(".")[0]}_${r}.json`;
 
-            const jsonObject = {
-                name: annotation.name,
-                description: annotation.description,
-                classification: annotation.classification
-            };
-
-            const jsonString = JSON.stringify(jsonObject);
+            const jsonString = JSON.stringify(annotation);
             const base64Content = btoa(jsonString);
 
             const apiEndpoint = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
@@ -277,7 +345,6 @@
                 showToast('successToast', 'Annotation saved successfully.');
                 markAsAnnotated(imageName);
                 clearAnnotationForm(imageName);
-                document.getElementById('image-list-div').scrollIntoView({ behavior: 'smooth' });
             })
             .catch(error => {
                 console.error('Error saving annotation:', error);
@@ -298,9 +365,12 @@
         function clearAnnotationForm(imageName) {
             document.getElementById('classification').value = '';
             document.getElementById('description').value = '';
+            document.getElementById('recordings-list').innerHTML = '';
+            currentAudioBlob = null;
             if (annotations[imageName]) {
                 annotations[imageName]['classification'] = '';
                 annotations[imageName]['description'] = '';
+                annotations[imageName]['audio'] = null;
             }
             checkFormCompletion();
         }
@@ -310,6 +380,48 @@
             toastElement.querySelector('.toast-body').textContent = message;
             $(toastElement).toast({ delay: 3000 });
             $(toastElement).toast('show');
+        }
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        currentAudioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(currentAudioBlob);
+                        const listItem = document.createElement('div');
+                        listItem.className = 'recording-item';
+                        listItem.innerHTML = `
+                            <audio controls src="${audioUrl}"></audio>
+                            <button class="btn btn-danger" onclick="discardRecording(this)">Discard</button>
+                        `;
+                        document.getElementById('recordings-list').appendChild(listItem);
+                        checkFormCompletion();
+                    };
+                    document.getElementById('start-recording').disabled = true;
+                    document.getElementById('stop-recording').disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error accessing microphone:', error);
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            document.getElementById('start-recording').disabled = false;
+            document.getElementById('stop-recording').disabled = true;
+        }
+
+        function discardRecording(button) {
+            const listItem = button.parentElement;
+            listItem.remove();
+            currentAudioBlob = null;
+            checkFormCompletion();
         }
 
         document.addEventListener('DOMContentLoaded', loadImagesFromFolder);
