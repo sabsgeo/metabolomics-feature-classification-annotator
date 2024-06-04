@@ -42,6 +42,9 @@
         .annotated .tick-icon {
             display: inline;
         }
+        .selected {
+            background-color: #d1ecf1;
+        }
         .toast {
             position: fixed;
             top: 20px;
@@ -180,6 +183,11 @@
                         name: file.name
                     }));
                     updateImageList();
+                    // Automatically select the first image
+                    if (images.length > 0) {
+                        loadImage(images[0]);
+                        document.querySelector(`#image-list li`).classList.add('selected');
+                    }
                 })
                 .catch(error => console.error('Error loading images:', error));
         }
@@ -187,16 +195,25 @@
         function updateImageList() {
             const imageListElement = document.getElementById('image-list');
             imageListElement.innerHTML = '';
-            images.forEach(image => {
+            images.forEach((image, index) => {
                 const listItem = document.createElement('li');
                 listItem.innerHTML = `${image.name} <i class="fas fa-check tick-icon"></i>`;
                 listItem.className = 'list-group-item list-group-item-action';
+                listItem.onclick = () => {
+                    clearSelected();
+                    listItem.classList.add('selected');
+                    loadImage(image);
+                };
                 if (isAnnotated(image.name)) {
                     listItem.classList.add('annotated');
                 }
-                listItem.onclick = () => loadImage(image);
                 imageListElement.appendChild(listItem);
             });
+        }
+
+        function clearSelected() {
+            const selectedItems = document.querySelectorAll('#image-list li.selected');
+            selectedItems.forEach(item => item.classList.remove('selected'));
         }
 
         function isAnnotated(imageName) {
